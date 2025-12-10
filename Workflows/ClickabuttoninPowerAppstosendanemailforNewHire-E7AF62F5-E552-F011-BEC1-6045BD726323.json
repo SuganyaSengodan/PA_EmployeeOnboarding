@@ -1,0 +1,269 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_approvals": {
+        "api": {
+          "name": "shared_approvals"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedapprovals_c28e0"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_office365": {
+        "api": {
+          "name": "shared_office365"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedoffice365_665f0"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_commondataserviceforapps": {
+        "api": {
+          "name": "shared_commondataserviceforapps"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "contoso_sharedcommondataserviceforapps_a075f"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "PowerAppV2",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "title": "EmpName",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Starter Details",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "email": {
+                  "title": "EmpEmail",
+                  "type": "string",
+                  "format": "email",
+                  "x-ms-dynamically-added": true,
+                  "description": "Starter Email",
+                  "x-ms-content-hint": "EMAIL"
+                },
+                "text_1": {
+                  "title": "EmailBody",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Eamil body",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_2": {
+                  "title": "ID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Row id",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_3": {
+                  "title": "Start Date",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "start dt",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_4": {
+                  "title": "jobTitle",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "position",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "text_5": {
+                  "title": "EmailType",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Send Custom Email",
+                  "x-ms-content-hint": "TEXT"
+                }
+              },
+              "required": [
+                "text",
+                "email",
+                "text_1",
+                "text_2",
+                "text_3",
+                "text_4",
+                "text_5"
+              ]
+            }
+          },
+          "metadata": {
+            "operationMetadataId": "1ecc0915-9d6b-48a7-83c3-8ac62a32915b"
+          }
+        }
+      },
+      "actions": {
+        "Start_and_wait_for_an_approval": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "approvalType": "BasicAwaitAll",
+              "WebhookApprovalCreationInput/title": "Approval Request : New Employee Onboarding",
+              "WebhookApprovalCreationInput/assignedTo": "Suganya.Sengodan@cognizant.com;",
+              "WebhookApprovalCreationInput/details": "New Starter Details:\n\nCandidate Details:@{triggerBody()['text']}\nPosition:@{triggerBody()['text_4']}\nStart Date : @{triggerBody()['text_3']}\nEmployee Email:@{triggerBody()['email']}\n\nPlease review the above details and approve or reject the onboarding request. ",
+              "WebhookApprovalCreationInput/enableNotifications": true,
+              "WebhookApprovalCreationInput/enableReassignment": true
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+              "operationId": "StartAndWaitForAnApproval",
+              "connectionName": "shared_approvals"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "2b52bdb1-b91d-4365-8411-46877a019c14"
+          }
+        },
+        "Condition": {
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@outputs('Start_and_wait_for_an_approval')?['body/outcome']",
+              "Approve"
+            ]
+          },
+          "actions": {
+            "Condition_2": {
+              "type": "If",
+              "expression": {
+                "not": {
+                  "equals": [
+                    "@triggerBody()['text_5']",
+                    "Send Custom Email"
+                  ]
+                }
+              },
+              "actions": {
+                "Send_an_email_(V2)": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "emailMessage/To": "@triggerBody()['email']",
+                      "emailMessage/Subject": "Welcome to the Team!",
+                      "emailMessage/Body": "<p>Hi @{triggerBody()['text']},<br>\n<br>\nWelcome to the team! We’re excited to have you join us at <b>Cognizant</b>.<br>\n<br>\nHere are your onboarding detail:<br>\n<br>\n<b>Start Date:</b> @{triggerBody()['text_3']}<br>\n<b>Start Time:</b> 9AM <br>\n<b>Office Location:</b> Sydney<br>\n<b>Manager:</b> Suganya<br>\n<b>Role:</b> @{triggerBody()['text_4']}<br>\n<br>\nYour first day will include:<br>\n<br>\nA welcome session with HR<br>\nTeam introductions<br>\nSystem setup and access<br>\nOverview of your onboarding plan.<br>\n<br>\nWhat to bring: Valid ID, laptop (if applicable), and a smile <br>\n<br>\nKind Regards,<br>\nHR<br>\n</p>"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                      "operationId": "SendEmailV2",
+                      "connectionName": "shared_office365"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "661bda5c-39c1-48d2-812c-993e4db7c224"
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Send_an_email_(V2)_3": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "emailMessage/To": "@triggerBody()['email']",
+                        "emailMessage/Subject": "Welcome to the Team!",
+                        "emailMessage/Body": "@{triggerBody()['text_1']}\n\n"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                        "operationId": "SendEmailV2",
+                        "connectionName": "shared_office365"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "661bda5c-39c1-48d2-812c-993e4db7c224"
+                    }
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "7591a20b-9ac0-48d2-ad8c-b54fefd06b78"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Get_a_row_by_ID": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "entityName": "cr7fd_employeerecords",
+                    "recordId": "@triggerBody()['text_2']"
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "operationId": "GetItem",
+                    "connectionName": "shared_commondataserviceforapps"
+                  }
+                },
+                "metadata": {
+                  "operationMetadataId": "5b1d8b7d-6ac7-42ee-845e-5d7ddca8d51d"
+                }
+              },
+              "Update_a_row": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "parameters": {
+                    "entityName": "cr7fd_employeerecords",
+                    "recordId": "@triggerBody()['text_2']",
+                    "item/statecode": 1
+                  },
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+                    "operationId": "UpdateOnlyRecord",
+                    "connectionName": "shared_commondataserviceforapps"
+                  }
+                },
+                "runAfter": {
+                  "Get_a_row_by_ID": [
+                    "Succeeded"
+                  ]
+                },
+                "metadata": {
+                  "operationMetadataId": "dded733b-94b1-40d1-827a-ef29c26158b3"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Start_and_wait_for_an_approval": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7ed53b19-1bbc-4257-af16-690b86e958e9"
+          }
+        }
+      },
+      "outputs": {},
+      "description": "Click a button in a Power Apps application to send a email to a specified email address."
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
